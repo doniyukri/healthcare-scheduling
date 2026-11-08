@@ -1,0 +1,20 @@
+{
+  "name": "healthcare-scheduling",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production-grade healthcare scheduling platform: NestJS, GraphQL, PostgreSQL, Prisma, Redis and BullMQ microservices.",
+  "license": "MIT",
+  "author": "Doni Yukri",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "stack:up": "docker compose up --build -d",
+    "stack:down": "docker compose down",
+    "stack:reset": "docker compose down -v",
+    "stack:logs": "docker compose logs -f",
+    "stack:ps": "docker compose ps",
+    "stack:config": "docker compose config",
+    "stack:wait": "node scripts/wait-for-health.mjs"
+  }
+}

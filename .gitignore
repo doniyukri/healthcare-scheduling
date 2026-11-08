@@ -1,0 +1,43 @@
+# ── Dependencies ────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ── Build output ────────────────────────────────────────────────
+dist/
+build/
+*.tsbuildinfo
+
+# ── Prisma generated client ─────────────────────────────────────
+**/src/generated/
+**/generated/prisma/
+
+# ── Environment files ───────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Test and coverage output ────────────────────────────────────
+coverage/
+.nyc_output/
+junit.xml
+*.lcov
+
+# ── Logs ────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+
+# ── OS / editor ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ── Test brief (not part of the deliverable) ────────────────────
+Technical Test Engineer*.pdf
+
+# ── Local scratch ───────────────────────────────────────────────
+tmp/
+.tmp/

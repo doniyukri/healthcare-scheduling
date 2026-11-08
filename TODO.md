@@ -1,0 +1,120 @@
+# Delivery TODO
+
+> Working checklist for the Healthcare Scheduling System skill test.
+> **P0** must ship. **P1** is production polish — surface it again when P0 is done.
+> **P2** is optional and only after P0 and P1.
+>
+> Deadline: **9 November 2026, 12:00 (+07:00)**.
+
+---
+
+## P0 — must ship
+
+### Repository and process
+- [x] Initialise Git repository, `main` + `develop` branches
+- [x] Root scaffolding: `.gitignore`, `.gitattributes`, `.editorconfig`, `LICENSE`, `.env.example`
+- [ ] Copy requirements and plan into `docs/`
+- [ ] Conventional Commits, feature branches, `v1.0.0` tag
+- [ ] No committed secrets
+
+### Auth Service (`:3001`)
+- [ ] `register` mutation — bcrypt hash, lowercase email, duplicate guard
+- [ ] `login` mutation — JWT (HS256, `sub`/`email`/`iat`/`exp`/`iss`/`aud`)
+- [ ] `validateToken` query — signature, expiry, issuer, audience, user existence
+- [ ] Prisma schema + migration (`auth_db`)
+- [ ] Validation, error codes, request IDs, Pino logging
+- [ ] Rate limiting on auth operations
+- [ ] Unit tests
+
+### Schedule Service (`:3002`)
+- [ ] Customer CRUD (create, list with pagination + search, get, update, delete)
+- [ ] Doctor CRUD (create, list with pagination + search, get, update, delete)
+- [ ] Schedule create, list (filters + pagination), get, delete
+- [ ] Auth delegation to Auth Service (timeout, retry, circuit breaker)
+- [ ] Doctor double-booking conflict (`SCHEDULE_CONFLICT`)
+- [ ] `Restrict` deletes for referenced customers/doctors
+- [ ] Prisma schema + migration (`schedule_db`)
+- [ ] Transactional audit log for mutations
+- [ ] Unit tests
+
+### Bonuses — all five
+- [ ] Email notification on schedule create/delete (Mailpit)
+- [ ] BullMQ queue + worker + retries + DLQ
+- [ ] Redis caching with TTL, jitter, invalidation, graceful fallback
+- [ ] Unit test coverage >= 50% per service
+- [ ] GraphQL API documentation (descriptions, examples, `docs/api.md`, Postman)
+
+### Docker
+- [ ] `docker-compose.yml` — Postgres (two DBs), `redis-cache`, `redis-queue`, Mailpit, three services
+- [ ] Multi-stage Dockerfiles, non-root user, healthchecks
+- [ ] Migrations + seed on startup
+- [ ] `docker compose up --build` works from a clean clone
+
+### Documentation
+- [ ] `README.md` — quickstart, architecture, env table, GraphQL examples, demo credentials
+- [ ] `docs/architecture.md` with Mermaid diagrams
+- [ ] `docs/api.md`
+- [ ] `docs/operations.md`
+- [ ] `docs/testing.md`
+- [ ] Postman collection + environment
+- [ ] Short Indonesian summary
+
+---
+
+## P1 — production polish (remind when P0 is done)
+
+- [ ] Transactional audit log exposed in `docs/operations.md` (queries, retention)
+- [ ] `/metrics` endpoint + Prometheus metrics (HTTP, DB, cache, queue, auth client)
+- [ ] GraphQL Armor (depth, aliases, cost) + GraphQL-aware throttler guard
+- [ ] Bull Board at `/admin/queues` with basic auth
+- [ ] Runbooks: auth outage, queue backlog, cache outage, database restore
+- [ ] ADRs: architecture, database-per-service, auth delegation, cache strategy, queue strategy, testing
+- [ ] `docs/security.md` + `SECURITY.md`
+- [ ] `docs/roadmap.md` with explicit non-goals
+- [ ] CI workflows: `ci.yml`, `smoke.yml`, `security.yml`, `commitlint.yml`
+- [ ] Husky + lint-staged + commitlint
+- [ ] E2E GraphQL tests against dedicated test databases
+- [ ] Newman smoke suite with Mailpit API assertions
+- [ ] Contract snapshots + GraphQL Inspector diff
+- [ ] `CHANGELOG.md`, `CONTRIBUTING.md`, `CODEOWNERS`
+
+---
+
+## P2 — optional (only after P0 and P1)
+
+- [ ] `release.yml` — GHCR images, SBOM, provenance
+- [ ] Prometheus + Grafana Compose profile and dashboard
+- [ ] k6 load test + `docs/performance.md`
+- [ ] Multi-arch image build (`linux/amd64,linux/arm64`)
+- [ ] Demo video (screenshots are the baseline)
+- [ ] `docs/slo.md`, `docs/threat-model.md`, `docs/glossary.md`, `docs/onboarding.md`
+
+---
+
+## Proof pack
+
+- [ ] `docs/proof/graphiql-auth.png`
+- [ ] `docs/proof/graphiql-schedule.png`
+- [ ] `docs/proof/mailpit-created.png`
+- [ ] `docs/proof/mailpit-deleted.png`
+- [ ] `docs/proof/bull-board.png`
+- [ ] `docs/proof/coverage.png`
+- [ ] `docs/proof/ci-green.png`
+- [ ] `docs/proof/docker-compose-ps.png`
+- [ ] `docs/proof/redis-keys.png`
+- [ ] `docs/proof/audit-log.png`
+
+---
+
+## Submission checklist
+
+- [ ] Clean clone from GitHub
+- [ ] `cp .env.example .env`
+- [ ] `docker compose up --build`
+- [ ] Run the 5-minute demo script
+- [ ] Run Newman
+- [ ] Run unit tests, coverage >= 50%
+- [ ] `gitleaks detect` clean
+- [ ] `main` and `develop` exist; tag `v1.0.0`
+- [ ] README quickstart matches reality
+- [ ] Proof pack committed

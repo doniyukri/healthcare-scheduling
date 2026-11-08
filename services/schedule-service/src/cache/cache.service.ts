@@ -163,7 +163,13 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      await this.client.incr(`${KEY_PREFIX}:${namespace}:version`);
+      const key = `${KEY_PREFIX}:${namespace}:version`;
+      const current = await this.client.incr(key);
+      if (current === 1) {
+        // If the key was freshly initialised by INCR (meaning the namespace was at default v1),
+        // increment once more to advance the version to v2 so existing v1 keys are invalidated.
+        await this.client.incr(key);
+      }
     } catch {
       // The next TTL expiry repairs the cache eventually.
     }

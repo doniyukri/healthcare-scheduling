@@ -16,7 +16,10 @@ module.exports = {
     '!src/main.ts',
     '!src/**/*.module.ts',
     '!src/generated/**',
-    '!src/**/*.dto.ts',
+    '!src/**/dto/**',
+    '!src/**/entities/**',
+    '!src/prisma/seed.ts',
+    '!src/prisma/prisma.service.ts',
   ],
   coverageDirectory: 'coverage',
 };

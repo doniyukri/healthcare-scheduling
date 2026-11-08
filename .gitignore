@@ -11,6 +11,9 @@ build/
 **/src/generated/
 **/generated/prisma/
 
+# ── Generated GraphQL SDL ───────────────────────────────────────
+**/schema.gql
+
 # ── Environment files ───────────────────────────────────────────
 .env
 .env.*

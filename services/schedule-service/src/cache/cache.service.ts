@@ -5,6 +5,14 @@ import { MetricsService } from '../metrics/metrics.service.js';
 
 const NULL_SENTINEL = '__healthcare_cache_null__';
 const KEY_PREFIX = 'schedule:v1';
+const DATE_FIELDS = new Set(['scheduledAt', 'createdAt', 'updatedAt']);
+
+function reviveDates(key: string, value: unknown): unknown {
+  if (!DATE_FIELDS.has(key) || typeof value !== 'string') return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new Error('Invalid cached date');
+  return date;
+}
 
 export interface CacheLookup<T> {
   hit: boolean;
@@ -105,7 +113,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
         return { hit: false, value: null };
       }
 
-      const value = raw === NULL_SENTINEL ? null : (JSON.parse(raw) as T);
+      const value = raw === NULL_SENTINEL ? null : (JSON.parse(raw, reviveDates) as T);
       this.metrics.recordCacheLookup(key, true);
       return { hit: true, value };
     } catch {

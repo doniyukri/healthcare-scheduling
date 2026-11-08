@@ -13,35 +13,35 @@
 ### Repository and process
 - [x] Initialise Git repository, `main` + `develop` branches
 - [x] Root scaffolding: `.gitignore`, `.gitattributes`, `.editorconfig`, `LICENSE`, `.env.example`
-- [ ] Copy requirements and plan into `docs/`
+- [x] Copy requirements and plan into `docs/`
 - [ ] Conventional Commits, feature branches, `v1.0.0` tag
-- [ ] No committed secrets
+- [x] No committed secrets
 
 ### Auth Service (`:3001`)
-- [ ] `register` mutation — bcrypt hash, lowercase email, duplicate guard
-- [ ] `login` mutation — JWT (HS256, `sub`/`email`/`iat`/`exp`/`iss`/`aud`)
-- [ ] `validateToken` query — signature, expiry, issuer, audience, user existence
-- [ ] Prisma schema + migration (`auth_db`)
-- [ ] Validation, error codes, request IDs, Pino logging
-- [ ] Rate limiting on auth operations
-- [ ] Unit tests
+- [x] `register` mutation — bcrypt hash, lowercase email, duplicate guard
+- [x] `login` mutation — JWT (HS256, `sub`/`email`/`iat`/`exp`/`iss`/`aud`)
+- [x] `validateToken` query — signature, expiry, issuer, audience, user existence
+- [x] Prisma schema + migration (`auth_db`)
+- [x] Validation, error codes, request IDs, Pino logging
+- [x] Rate limiting on auth operations
+- [x] Unit tests
 
 ### Schedule Service (`:3002`)
-- [ ] Customer CRUD (create, list with pagination + search, get, update, delete)
-- [ ] Doctor CRUD (create, list with pagination + search, get, update, delete)
-- [ ] Schedule create, list (filters + pagination), get, delete
-- [ ] Auth delegation to Auth Service (timeout, retry, circuit breaker)
-- [ ] Doctor double-booking conflict (`SCHEDULE_CONFLICT`)
-- [ ] `Restrict` deletes for referenced customers/doctors
-- [ ] Prisma schema + migration (`schedule_db`)
-- [ ] Transactional audit log for mutations
-- [ ] Unit tests
+- [x] Customer CRUD (create, list with pagination + search, get, update, delete)
+- [x] Doctor CRUD (create, list with pagination + search, get, update, delete)
+- [x] Schedule create, list (filters + pagination), get, delete
+- [x] Auth delegation to Auth Service (timeout, retry, circuit breaker)
+- [x] Doctor double-booking conflict (`SCHEDULE_CONFLICT`)
+- [x] `Restrict` deletes for referenced customers/doctors
+- [x] Prisma schema + migration (`schedule_db`)
+- [x] Transactional audit log for mutations
+- [x] Unit tests
 
 ### Bonuses — all five
-- [ ] Email notification on schedule create/delete (Mailpit)
-- [ ] BullMQ queue + worker + retries + DLQ
-- [ ] Redis caching with TTL, jitter, invalidation, graceful fallback
-- [ ] Unit test coverage >= 50% per service
+- [x] Email notification on schedule create/delete (Mailpit)
+- [x] BullMQ queue + worker + retries + DLQ
+- [x] Redis caching with TTL, jitter, invalidation, graceful fallback
+- [x] Unit test coverage >= 50% per service
 - [ ] GraphQL API documentation (descriptions, examples, `docs/api.md`, Postman)
 
 ### Docker

@@ -6,7 +6,6 @@ import type { DoctorsRepository } from '../doctors/doctors.repository.js';
 import type { Customer, Doctor } from '../generated/prisma/client.js';
 import type { MetricsService } from '../metrics/metrics.service.js';
 import type { NotificationProducer } from '../queue/notification.producer.js';
-import type { ScheduleAuditService } from './schedule-audit.service.js';
 import type { SchedulesRepository } from './schedules.repository.js';
 import { SchedulesService } from './schedules.service.js';
 import type { ScheduleWithRelations } from './entities/schedule.entity.js';
@@ -64,7 +63,6 @@ function createService() {
     enqueueScheduleCreated: jest.fn().mockResolvedValue(undefined),
     enqueueScheduleDeleted: jest.fn().mockResolvedValue(undefined),
   };
-  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const metrics = { recordScheduleOperation: jest.fn() };
 
   return {
@@ -74,7 +72,6 @@ function createService() {
       doctors as unknown as DoctorsRepository,
       cache as unknown as CacheService,
       notifications as unknown as NotificationProducer,
-      audit as unknown as ScheduleAuditService,
       metrics as unknown as MetricsService,
     ),
     schedules,
@@ -82,7 +79,6 @@ function createService() {
     doctors,
     cache,
     notifications,
-    audit,
     metrics,
   };
 }
@@ -133,7 +129,7 @@ describe('SchedulesService', () => {
     });
 
     it('creates the schedule and publishes side effects', async () => {
-      const { service, customers, doctors, schedules, cache, notifications, audit, metrics } =
+      const { service, customers, doctors, schedules, cache, notifications, metrics } =
         createService();
       customers.findById.mockResolvedValue(customer);
       doctors.findById.mockResolvedValue(doctor);
@@ -151,7 +147,7 @@ describe('SchedulesService', () => {
         scheduledAt: createInput.scheduledAt,
         customer: { connect: { id: customer.id } },
         doctor: { connect: { id: doctor.id } },
-      });
+      }, actor);
       expect(notifications.enqueueScheduleCreated).toHaveBeenCalledWith(
         expect.objectContaining({
           scheduleId: schedule.id,
@@ -159,7 +155,6 @@ describe('SchedulesService', () => {
           scheduledAt: '2026-12-01T09:00:00.000Z',
         }),
       );
-      expect(audit.record).toHaveBeenCalledWith('SCHEDULE_CREATED', schedule, actor);
       expect(metrics.recordScheduleOperation).toHaveBeenCalledWith('create');
       expect(cache.bumpVersion).toHaveBeenCalledWith('schedules');
     });
@@ -188,7 +183,7 @@ describe('SchedulesService', () => {
     });
 
     it('deletes the schedule and publishes the cancellation', async () => {
-      const { service, schedules, notifications, audit, metrics } = createService();
+      const { service, schedules, notifications, metrics } = createService();
       schedules.findById.mockResolvedValue(schedule);
       schedules.delete.mockResolvedValue(schedule);
 
@@ -199,7 +194,6 @@ describe('SchedulesService', () => {
       expect(notifications.enqueueScheduleDeleted).toHaveBeenCalledWith(
         expect.objectContaining({ scheduleId: schedule.id }),
       );
-      expect(audit.record).toHaveBeenCalledWith('SCHEDULE_DELETED', schedule, actor);
       expect(metrics.recordScheduleOperation).toHaveBeenCalledWith('delete');
     });
 

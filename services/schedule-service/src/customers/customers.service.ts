@@ -60,7 +60,11 @@ export class CustomersService {
         ...(input.email === undefined ? {} : { email: input.email }),
       });
 
-      await Promise.all([this.invalidateLists(), this.invalidateDetail(id)]);
+      await Promise.all([
+        this.invalidateLists(),
+        this.invalidateDetail(id),
+        this.cache.bumpVersion(CACHE_NAMESPACES.schedules),
+      ]);
       return toCustomerEntity(customer);
     } catch (error) {
       mapPrismaError(error, {

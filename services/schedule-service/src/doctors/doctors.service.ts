@@ -38,6 +38,7 @@ export class DoctorsService {
       const doctor = await this.doctors.update(id, { name: input.name });
       await Promise.all([
         this.cache.bumpVersion(CACHE_NAMESPACES.doctors),
+        this.cache.bumpVersion(CACHE_NAMESPACES.schedules),
         this.cache.delete(this.cache.staticKey(CACHE_NAMESPACES.doctors, `detail:${id}`)),
       ]);
       return toDoctorEntity(doctor);

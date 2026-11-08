@@ -1,6 +1,18 @@
 name: healthcare-scheduling
 
 services:
+  web:
+    build: ./web
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      schedule-service:
+        condition: service_healthy
+    networks:
+      - backend
+
   postgres:
     image: postgres:17-alpine
     environment:
@@ -158,6 +170,49 @@ services:
         - node
         - -e
         - "fetch('http://127.0.0.1:3002/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    stop_grace_period: 15s
+    networks:
+      - backend
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    image: healthcare/notification-service:local
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-UTC}
+      NOTIFICATION_PORT: 3003
+      REDIS_QUEUE_URL: ${REDIS_QUEUE_URL:-redis://redis-queue:6379}
+      NOTIFICATION_QUEUE_NAME: ${NOTIFICATION_QUEUE_NAME:-notifications}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@healthcare.local}
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Healthcare Scheduling}"
+      MAIL_TIMEZONE: ${MAIL_TIMEZONE:-Asia/Jakarta}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+    ports:
+      - "${NOTIFICATION_PORT:-3003}:3003"
+    depends_on:
+      redis-queue:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3003/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 10s
       timeout: 5s
       retries: 12

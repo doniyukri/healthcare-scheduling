@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import type { ConfigService } from '@nestjs/config';
 import type { MetricsService } from '../metrics/metrics.service.js';
+import { GraphQLISODateTime } from '@nestjs/graphql';
 
 type Handler = (...args: unknown[]) => void;
 
@@ -103,6 +104,19 @@ async function createService(
 describe('CacheService', () => {
   afterEach(() => {
     FakeRedis.instance = null;
+  });
+
+  it('restores appointment and nested entity dates after a cache round trip', async () => {
+    const { service } = await createService();
+    const time = new Date('2026-11-09T09:00:00.000Z');
+    await service.store('schedule', { items: [{ scheduledAt: time, createdAt: time, updatedAt: time, objective: '2026-11-09T09:00:00.000Z', customer: { createdAt: time, updatedAt: time }, doctor: { createdAt: time, updatedAt: time } }] });
+    const result = await service.lookup<{ items: Array<{ scheduledAt: Date; createdAt: Date; updatedAt: Date; objective: string; customer: { createdAt: Date; updatedAt: Date }; doctor: { createdAt: Date; updatedAt: Date } }> }>('schedule');
+    const item = result.value!.items[0];
+    for (const date of [item.scheduledAt, item.createdAt, item.updatedAt, item.customer.createdAt, item.customer.updatedAt, item.doctor.createdAt, item.doctor.updatedAt]) {
+      expect(date).toBeInstanceOf(Date);
+      expect(GraphQLISODateTime.serialize(date)).toBe(time.toISOString());
+    }
+    expect(item.objective).toBe(time.toISOString());
   });
 
   it('reads, writes and deletes values while tracking metrics', async () => {

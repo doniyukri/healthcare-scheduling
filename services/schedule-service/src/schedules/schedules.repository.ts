@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ScheduleWithRelations } from './entities/schedule.entity.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { AuthenticatedUser } from '../auth-client/auth-client.types.js';
 
 const relations = { customer: true, doctor: true } as const;
 
@@ -38,11 +39,26 @@ export class SchedulesRepository {
     });
   }
 
-  create(data: Prisma.ScheduleCreateInput): Promise<ScheduleWithRelations> {
-    return this.prisma.schedule.create({ data, include: relations });
+  create(data: Prisma.ScheduleCreateInput, actor: AuthenticatedUser): Promise<ScheduleWithRelations> {
+    return this.prisma.$transaction(async (tx) => {
+      const schedule = await tx.schedule.create({ data, include: relations });
+      await this.audit(tx, 'SCHEDULE_CREATED', schedule, actor);
+      return schedule;
+    });
   }
 
-  delete(id: string): Promise<ScheduleWithRelations> {
-    return this.prisma.schedule.delete({ where: { id }, include: relations });
+  delete(id: string, actor: AuthenticatedUser): Promise<ScheduleWithRelations> {
+    return this.prisma.$transaction(async (tx) => {
+      const schedule = await tx.schedule.delete({ where: { id }, include: relations });
+      await this.audit(tx, 'SCHEDULE_DELETED', schedule, actor);
+      return schedule;
+    });
+  }
+
+  private async audit(tx: Prisma.TransactionClient, action: string, schedule: ScheduleWithRelations, actor: AuthenticatedUser): Promise<void> {
+    await tx.auditLog.create({ data: {
+      action, entity: 'schedule', entityId: schedule.id, actorId: actor.id, actorEmail: actor.email,
+      metadata: { objective: schedule.objective, customerId: schedule.customerId, doctorId: schedule.doctorId, scheduledAt: schedule.scheduledAt.toISOString() },
+    } });
   }
 }

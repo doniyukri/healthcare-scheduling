@@ -1,6 +1,7 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Throttle } from '@nestjs/throttler';
 import { RATE_LIMITS } from '../common/constants.js';
+import { DomainError } from '../common/errors/domain.error.js';
 import { UserEntity } from '../users/entities/user.entity.js';
 import { AuthService } from './auth.service.js';
 import { AuthPayload } from './dto/auth-payload.js';
@@ -17,7 +18,7 @@ export class AuthResolver {
   })
   @Throttle({ default: RATE_LIMITS.auth })
   register(
-    @Args('input', { type: () => RegisterInput }) input: RegisterInput,
+    @Args('input', { type: () => RegisterInput, description: 'Email and password for the new account.' }) input: RegisterInput,
   ): Promise<AuthPayload> {
     return this.authService.register(input);
   }
@@ -26,7 +27,7 @@ export class AuthResolver {
     description: 'Authenticate a user and return a signed JWT access token.',
   })
   @Throttle({ default: RATE_LIMITS.auth })
-  login(@Args('input', { type: () => LoginInput }) input: LoginInput): Promise<AuthPayload> {
+  login(@Args('input', { type: () => LoginInput, description: 'Account credentials.' }) input: LoginInput): Promise<AuthPayload> {
     return this.authService.login(input);
   }
 
@@ -35,12 +36,11 @@ export class AuthResolver {
       'Validate a JWT and return the corresponding user. Used by other services for authentication.',
   })
   validateToken(
-    @Args('token', {
-      type: () => String,
-      description: 'The JWT access token to validate.',
-    })
-    token: string,
+    @Context() context: { req: { headers: { authorization?: string } } },
   ): Promise<UserEntity> {
+    const match = /^Bearer\s+(\S+)$/i.exec(context.req.headers.authorization?.trim() ?? '');
+    if (!match) throw new DomainError('UNAUTHORIZED', 'Missing or malformed bearer token', 401);
+    const token = match[1];
     return this.authService.validateToken(token);
   }
 }

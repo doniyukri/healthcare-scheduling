@@ -17,8 +17,8 @@ interface AuthGraphqlResponse {
 }
 
 const VALIDATE_TOKEN_QUERY = /* GraphQL */ `
-  query ValidateToken($token: String!) {
-    validateToken(token: $token) {
+  query ValidateToken {
+    validateToken {
       id
       email
     }

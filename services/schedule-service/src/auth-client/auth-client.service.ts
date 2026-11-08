@@ -72,7 +72,6 @@ export class AuthClientService {
       },
       body: JSON.stringify({
         query: VALIDATE_TOKEN_QUERY,
-        variables: { token },
       }),
       signal: AbortSignal.timeout(this.timeoutMs),
     });

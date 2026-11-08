@@ -23,7 +23,6 @@ import {
   type ScheduleEntity,
   type ScheduleWithRelations,
 } from './entities/schedule.entity.js';
-import { ScheduleAuditService } from './schedule-audit.service.js';
 import { SchedulesRepository } from './schedules.repository.js';
 
 @Injectable()
@@ -36,7 +35,6 @@ export class SchedulesService {
     private readonly doctors: DoctorsRepository,
     private readonly cache: CacheService,
     private readonly notifications: NotificationProducer,
-    private readonly audit: ScheduleAuditService,
     private readonly metrics: MetricsService,
   ) {}
 
@@ -64,9 +62,9 @@ export class SchedulesService {
         scheduledAt: input.scheduledAt,
         customer: { connect: { id: input.customerId } },
         doctor: { connect: { id: input.doctorId } },
-      });
+      }, actor);
 
-      await this.afterMutation(schedule, 'created', actor);
+      await this.afterMutation(schedule, 'created');
       this.metrics.recordScheduleOperation('create');
       return toScheduleEntity(schedule);
     } catch (error) {
@@ -85,8 +83,8 @@ export class SchedulesService {
     }
 
     try {
-      const schedule = await this.schedules.delete(id);
-      await this.afterMutation(schedule, 'deleted', actor);
+      const schedule = await this.schedules.delete(id, actor);
+      await this.afterMutation(schedule, 'deleted');
       this.metrics.recordScheduleOperation('delete');
       return toScheduleEntity(schedule);
     } catch (error) {
@@ -97,7 +95,7 @@ export class SchedulesService {
   }
 
   async findOne(id: string): Promise<ScheduleEntity> {
-    const key = this.cache.staticKey(CACHE_NAMESPACES.schedules, `detail:${id}`);
+    const key = await this.cache.key(CACHE_NAMESPACES.schedules, `detail:${id}`);
     const cached = await this.cache.lookup<ScheduleEntity>(key);
 
     if (cached.hit) {
@@ -190,7 +188,6 @@ export class SchedulesService {
   private async afterMutation(
     schedule: ScheduleWithRelations,
     event: 'created' | 'deleted',
-    actor: AuthenticatedUser,
   ): Promise<void> {
     const payload: Omit<ScheduleEmailPayload, 'event'> = {
       scheduleId: schedule.id,
@@ -209,11 +206,9 @@ export class SchedulesService {
 
     await Promise.all([
       this.cache.bumpVersion(CACHE_NAMESPACES.schedules),
-      this.cache.delete(this.cache.staticKey(CACHE_NAMESPACES.schedules, `detail:${schedule.id}`)),
       event === 'created'
         ? this.notifications.enqueueScheduleCreated(payload)
         : this.notifications.enqueueScheduleDeleted(payload),
-      this.audit.record(event === 'created' ? 'SCHEDULE_CREATED' : 'SCHEDULE_DELETED', schedule, actor),
     ]);
   }
 

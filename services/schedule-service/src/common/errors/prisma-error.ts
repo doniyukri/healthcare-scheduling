@@ -1,4 +1,4 @@
-import { DomainError } from '../errors/domain.error.js';
+import type { DomainError } from '../errors/domain.error.js';
 
 interface PrismaLikeError {
   code?: unknown;

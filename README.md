@@ -58,6 +58,8 @@ Variables omitted from `.env.example` use the defaults shown in `docker-compose.
 
 ## Tests
 
+For a guided manual walkthrough and expected results, start with the [reviewer testing guide](docs/testing-guide.md).
+
 Each service has independent dependencies. With Node 24 installed, run `npm ci`, `npm run prisma:generate` (Auth and Schedule only), and `npm run test:cov` in each service directory. Schedule and Notification enforce coverage thresholds. For an end-to-end check against a running local stack, run `node scripts/acceptance.mjs`; it exercises CRUD, authentication, conflicts and both email notifications. It deletes its test customer, doctor and appointment, but leaves its test user account. `AUTH_URL`, `SCHEDULE_URL` and `MAILPIT_URL` can point the test at an isolated stack.
 
 ## Try the API

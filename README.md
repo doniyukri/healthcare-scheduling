@@ -2,6 +2,10 @@
 
 A NestJS GraphQL backend for clinic scheduling, with separate authentication and scheduling databases, Redis caching, and email notifications via BullMQ and Mailpit.
 
+## Branches
+
+`develop` is the integration branch; `main` is the stable submission branch. See [the branching and release workflow](docs/branching.md) for branch naming, checks, and promotion.
+
 ## Run locally
 
 Install Docker Desktop, copy `.env.example` to `.env`, then run:

@@ -63,7 +63,7 @@ An approachable operational workspace combines red brand and headings, purple pr
 
 ## Colors
 
-Brand red appears in wordmarks and headings; deep red marks active navigation and destructive actions. Purple distinguishes primary buttons. White and light gray form the canvas, with warm ink, muted text, borders, and pale rose selected states.
+Red marks active navigation and destructive actions. Purple distinguishes primary buttons. White and light gray form the canvas, with warm ink, muted text, borders, and pale rose selected states. Use neutral workspace text in place of an improvised brand logo.
 
 ## Typography
 
@@ -71,11 +71,11 @@ Avenir Next, Avenir, Segoe UI, and sans-serif form a single approachable stack. 
 
 ## Layout
 
-The desktop workspace uses a 246px sidebar, a 72px top bar, and a centered content area capped at 1500px. Forms use two columns. At 760px and below, the sidebar becomes an icon rail, forms become one column, and tables scroll horizontally with a swipe hint. The split sign-in screen becomes a single panel.
+The desktop workspace uses a 246px sidebar and a left-aligned content area. On desktop, the workspace fits the viewport and long tables scroll within their panel. Forms use two columns. At 760px and below, the sidebar becomes an icon rail, forms become one column, and tables scroll horizontally with a swipe hint. The split sign-in screen becomes a single panel.
 
 ## Elevation & Depth
 
-The interface is flat: white surfaces, warm borders, and tonal backgrounds separate regions without box shadows.
+The interface is primarily flat: white surfaces, warm borders, and tonal backgrounds separate regions. The account menu uses a soft shadow to distinguish the overlay.
 
 ## Shapes
 
@@ -97,7 +97,7 @@ White fields have warm borders, 9px corners, 48px minimum height, and a stronger
 
 ### Navigation
 
-The white sidebar uses compact icon-and-label rows. Active items have pale rose backgrounds and deep red text. On small screens the rail shows icons without labels.
+The white sidebar uses compact icon-and-label rows. Active items have pale rose backgrounds and deep red text. On small screens the rail shows icons without labels. The top-right account control opens a menu with the signed-in email and sign-out action.
 
 ### Status and feedback
 
@@ -106,10 +106,10 @@ Rounded status chips use pale green with dark green text. Notices use tinted gre
 ## Do's and Don'ts
 
 ### Do:
-- **Do** use red for brand and page headings and purple for primary actions.
+- **Do** use red for navigation and emphasis and purple for primary actions.
 - **Do** preserve visible keyboard focus and reduced-motion behavior.
 - **Do** keep tables horizontally scrollable on narrow screens.
 
 ### Don't:
 - **Don't** present the reference-inspired palette as an official brand specification.
-- **Don't** add shadows to the existing flat surface language without a deliberate design change.
+- **Don't** introduce an improvised Rata logo; use neutral workspace text unless an authorized asset is provided.

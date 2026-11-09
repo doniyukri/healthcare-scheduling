@@ -1,0 +1,67 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Customer {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @db.VarChar(200)
+  email     String     @unique @db.VarChar(320)
+  createdAt DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @db.Timestamptz(3)
+  schedules Schedule[]
+
+  @@index([name])
+  @@map("customers")
+}
+
+model Doctor {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @db.VarChar(200)
+  createdAt DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @db.Timestamptz(3)
+  schedules Schedule[]
+
+  @@index([name])
+  @@map("doctors")
+}
+
+model Schedule {
+  id          String   @id @default(uuid()) @db.Uuid
+  objective   String   @db.VarChar(500)
+  customerId  String   @db.Uuid
+  doctorId    String   @db.Uuid
+  scheduledAt DateTime @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  doctor   Doctor   @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+
+  // Survives application-level races: two concurrent inserts cannot both win.
+  @@unique([doctorId, scheduledAt], name: "schedule_doctor_time_unique")
+  @@index([customerId])
+  @@index([scheduledAt])
+  @@map("schedules")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  action     String   @db.VarChar(50)
+  entity     String   @db.VarChar(50)
+  entityId   String   @db.Uuid
+  actorId    String   @db.Uuid
+  actorEmail String   @db.VarChar(320)
+  metadata   Json?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

@@ -1,0 +1,231 @@
+name: healthcare-scheduling
+
+services:
+  web:
+    build: ./web
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      schedule-service:
+        condition: service_healthy
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: UTC
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -U ${POSTGRES_USER} -d postgres &&
+          psql -U ${POSTGRES_USER} -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='auth_db'" | grep -q 1 &&
+          psql -U ${POSTGRES_USER} -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='schedule_db'" | grep -q 1
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - backend
+
+  redis-cache:
+    image: redis:7-alpine
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./docker/redis/cache.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-cache-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - backend
+
+  redis-queue:
+    image: redis:7-alpine
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "${REDIS_QUEUE_PORT:-6380}:6379"
+    volumes:
+      - ./docker/redis/queue.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-queue-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - backend
+
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+    networks:
+      - backend
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    image: healthcare/auth-service:local
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-UTC}
+      AUTH_PORT: 3001
+      AUTH_DATABASE_URL: ${AUTH_DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      JWT_ISSUER: ${JWT_ISSUER:-healthcare-auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-healthcare-api}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      AUTH_THROTTLE_TTL_MS: ${AUTH_THROTTLE_TTL_MS:-60000}
+      AUTH_THROTTLE_LIMIT: ${AUTH_THROTTLE_LIMIT:-5}
+      CORS_ORIGIN: "${CORS_ORIGIN:-*}"
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-admin@clinic.local}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-Password123}
+    ports:
+      - "${AUTH_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    stop_grace_period: 15s
+    networks:
+      - backend
+
+  schedule-service:
+    build:
+      context: ./services/schedule-service
+      dockerfile: Dockerfile
+    image: healthcare/schedule-service:local
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-UTC}
+      SCHEDULE_PORT: 3002
+      SCHEDULE_DATABASE_URL: ${SCHEDULE_DATABASE_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:3001/graphql}
+      AUTH_SERVICE_TIMEOUT_MS: ${AUTH_SERVICE_TIMEOUT_MS:-2000}
+      AUTH_SERVICE_MAX_RETRIES: ${AUTH_SERVICE_MAX_RETRIES:-1}
+      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis-cache:6379}
+      REDIS_QUEUE_URL: ${REDIS_QUEUE_URL:-redis://redis-queue:6379}
+      CACHE_ENABLED: ${CACHE_ENABLED:-true}
+      CACHE_TTL_MS: ${CACHE_TTL_MS:-60000}
+      CACHE_TTL_JITTER_PERCENT: ${CACHE_TTL_JITTER_PERCENT:-10}
+      CACHE_NEGATIVE_TTL_MS: ${CACHE_NEGATIVE_TTL_MS:-10000}
+      QUEUE_ENABLED: ${QUEUE_ENABLED:-true}
+      NOTIFICATION_QUEUE_NAME: ${NOTIFICATION_QUEUE_NAME:-notifications}
+      SCHEDULE_THROTTLE_TTL_MS: ${SCHEDULE_THROTTLE_TTL_MS:-60000}
+      SCHEDULE_THROTTLE_LIMIT: ${SCHEDULE_THROTTLE_LIMIT:-100}
+      GRAPHQL_DEPTH_LIMIT: ${GRAPHQL_DEPTH_LIMIT:-10}
+      GRAPHQL_INTROSPECTION: ${GRAPHQL_INTROSPECTION:-true}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      CORS_ORIGIN: "${CORS_ORIGIN:-*}"
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    ports:
+      - "${SCHEDULE_PORT:-3002}:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      redis-queue:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3002/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    stop_grace_period: 15s
+    networks:
+      - backend
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    image: healthcare/notification-service:local
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-UTC}
+      NOTIFICATION_PORT: 3003
+      REDIS_QUEUE_URL: ${REDIS_QUEUE_URL:-redis://redis-queue:6379}
+      NOTIFICATION_QUEUE_NAME: ${NOTIFICATION_QUEUE_NAME:-notifications}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@healthcare.local}
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Healthcare Scheduling}"
+      MAIL_TIMEZONE: ${MAIL_TIMEZONE:-Asia/Jakarta}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+    ports:
+      - "${NOTIFICATION_PORT:-3003}:3003"
+    depends_on:
+      redis-queue:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3003/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    stop_grace_period: 15s
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-cache-data:
+  redis-queue-data:

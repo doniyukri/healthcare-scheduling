@@ -42,22 +42,22 @@
 - [x] BullMQ queue + worker + retries + DLQ
 - [x] Redis caching with TTL, jitter, invalidation, graceful fallback
 - [x] Unit test coverage >= 50% per service
-- [ ] GraphQL API documentation (descriptions, examples, `docs/api.md`, Postman)
+- [x] GraphQL API documentation (descriptions, examples, `docs/api.md`, Postman)
 
 ### Docker
-- [ ] `docker-compose.yml` — Postgres (two DBs), `redis-cache`, `redis-queue`, Mailpit, three services
-- [ ] Multi-stage Dockerfiles, non-root user, healthchecks
-- [ ] Migrations + seed on startup
-- [ ] `docker compose up --build` works from a clean clone
+- [x] `docker-compose.yml` — Postgres (two DBs), `redis-cache`, `redis-queue`, Mailpit, three services
+- [x] Multi-stage Dockerfiles, non-root user, healthchecks
+- [x] Migrations + seed on startup
+- [x] `docker compose up --build` works from the release workspace
 
 ### Documentation
-- [ ] `README.md` — quickstart, architecture, env table, GraphQL examples, demo credentials
-- [ ] `docs/architecture.md` with Mermaid diagrams
-- [ ] `docs/api.md`
-- [ ] `docs/operations.md`
-- [ ] `docs/testing.md`
-- [ ] Postman collection + environment
-- [ ] Short Indonesian summary
+- [x] `README.md` — quickstart, architecture, env table, GraphQL examples, demo credentials
+- [x] `docs/architecture.md` with Mermaid diagrams
+- [x] `docs/api.md`
+- [x] `docs/operations.md`
+- [x] `docs/testing.md`
+- [x] Postman collection + environment
+- [x] Short Indonesian summary
 
 ---
 
@@ -70,7 +70,7 @@
 - [ ] Runbooks: auth outage, queue backlog, cache outage, database restore
 - [ ] ADRs: architecture, database-per-service, auth delegation, cache strategy, queue strategy, testing
 - [ ] `docs/security.md` + `SECURITY.md`
-- [ ] `docs/roadmap.md` with explicit non-goals
+- [x] `docs/roadmap.md` with explicit non-goals
 - [ ] CI workflows: `ci.yml`, `smoke.yml`, `security.yml`, `commitlint.yml`
 - [ ] Husky + lint-staged + commitlint
 - [ ] E2E GraphQL tests against dedicated test databases
@@ -110,11 +110,11 @@
 
 - [ ] Clean clone from GitHub
 - [ ] `cp .env.example .env`
-- [ ] `docker compose up --build`
-- [ ] Run the 5-minute demo script
-- [ ] Run Newman
-- [ ] Run unit tests, coverage >= 50%
-- [ ] `gitleaks detect` clean
+- [x] `docker compose up --build`
+- [x] Run the 5-minute demo script
+- [x] Run Newman (14 requests, 38 assertions)
+- [x] Run unit tests, coverage >= 50% (171 tests)
+- [x] `gitleaks detect` clean (10 commits, no leaks)
 - [ ] `main` and `develop` exist; tag `v1.0.0`
-- [ ] README quickstart matches reality
+- [x] README quickstart matches reality
 - [ ] Proof pack committed

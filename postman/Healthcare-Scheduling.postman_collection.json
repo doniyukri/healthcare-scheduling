@@ -1,0 +1,426 @@
+{
+  "info": {
+    "_postman_id": "ba98b946-f96a-4df2-a373-96ea7ad52f06",
+    "name": "Healthcare Scheduling",
+    "description": "Chained P0 verification for Auth, Customer, Doctor, Schedule, conflict handling, and asynchronous email delivery. Run the full collection with the Local environment. A uniquely named Auth user remains after a run because user deletion is not part of the API.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Server did not fail', () => pm.expect(pm.response.code).to.be.below(500));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "authUrl", "value": "http://localhost:3001/graphql" },
+    { "key": "scheduleUrl", "value": "http://localhost:3002/graphql" },
+    { "key": "mailpitUrl", "value": "http://localhost:8025" },
+    { "key": "token", "value": "" },
+    { "key": "testPassword", "value": "PostmanPassword123" },
+    { "key": "testUserEmail", "value": "" },
+    { "key": "scheduledAt", "value": "" },
+    { "key": "customerId", "value": "" },
+    { "key": "doctorId", "value": "" },
+    { "key": "scheduleId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register unique test user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = Date.now();",
+                  "pm.environment.set('testUserEmail', `postman-${runId}@example.com`);",
+                  "pm.environment.set('scheduledAt', new Date(Date.now() + 86400000 * 365).toISOString());",
+                  "for (const key of ['token', 'customerId', 'doctorId', 'scheduleId']) pm.environment.unset(key);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Registration has no GraphQL errors', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.test('Registration returns a token', () => pm.expect(body.data.register.accessToken).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('token', body.data.register.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation Register($input: RegisterInput!) { register(input: $input) { accessToken user { id email } } }\",\n  \"variables\": { \"input\": { \"email\": \"{{testUserEmail}}\", \"password\": \"{{testPassword}}\" } }\n}"
+            },
+            "url": "{{authUrl}}"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Login has no GraphQL errors', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.test('Login returns the registered email', () => pm.expect(body.data.login.user.email).to.eql(pm.environment.get('testUserEmail')));",
+                  "pm.environment.set('token', body.data.login.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation Login($input: LoginInput!) { login(input: $input) { accessToken user { id email } } }\",\n  \"variables\": { \"input\": { \"email\": \"{{testUserEmail}}\", \"password\": \"{{testPassword}}\" } }\n}"
+            },
+            "url": "{{authUrl}}"
+          }
+        },
+        {
+          "name": "Validate token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Token is valid', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.test('Token resolves the registered user', () => pm.expect(body.data.validateToken.email).to.eql(pm.environment.get('testUserEmail')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"query\":\"query { validateToken { id email } }\"}" },
+            "url": "{{authUrl}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Customers",
+      "item": [
+        {
+          "name": "Create customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Customer creation succeeds', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.environment.set('customerId', body.data.createCustomer.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation CreateCustomer($input: CreateCustomerInput!) { createCustomer(input: $input) { id name email } }\",\n  \"variables\": { \"input\": { \"name\": \"Postman Patient\", \"email\": \"{{testUserEmail}}\" } }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        },
+        {
+          "name": "List and update customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Customer update succeeds', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.test('Customer name is updated', () => pm.expect(body.data.updateCustomer.name).to.eql('Updated Postman Patient'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation UpdateCustomer($id: ID!, $input: UpdateCustomerInput!) { updateCustomer(id: $id, input: $input) { id name email } }\",\n  \"variables\": { \"id\": \"{{customerId}}\", \"input\": { \"name\": \"Updated Postman Patient\" } }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Doctors",
+      "item": [
+        {
+          "name": "Create doctor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Doctor creation succeeds', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.environment.set('doctorId', body.data.createDoctor.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation CreateDoctor($input: CreateDoctorInput!) { createDoctor(input: $input) { id name } }\",\n  \"variables\": { \"input\": { \"name\": \"Postman Doctor\" } }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        },
+        {
+          "name": "List doctors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Doctor list succeeds', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.test('Created doctor is listed', () => pm.expect(body.data.doctors.items.some(item => item.id === pm.environment.get('doctorId'))).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query Doctors($filter: DoctorFilterInput, $pagination: PaginationInput) { doctors(filter: $filter, pagination: $pagination) { items { id name } pageInfo { total } } }\",\n  \"variables\": { \"filter\": { \"search\": \"Postman Doctor\" }, \"pagination\": { \"page\": 1, \"limit\": 100 } }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Schedules and notifications",
+      "item": [
+        {
+          "name": "Create schedule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Schedule creation succeeds', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.test('Relations are returned', () => { pm.expect(body.data.createSchedule.customer.id).to.eql(pm.environment.get('customerId')); pm.expect(body.data.createSchedule.doctor.id).to.eql(pm.environment.get('doctorId')); });",
+                  "pm.environment.set('scheduleId', body.data.createSchedule.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation CreateSchedule($input: CreateScheduleInput!) { createSchedule(input: $input) { id objective scheduledAt customer { id name } doctor { id name } } }\",\n  \"variables\": { \"input\": { \"customerId\": \"{{customerId}}\", \"doctorId\": \"{{doctorId}}\", \"objective\": \"Postman verification\", \"scheduledAt\": \"{{scheduledAt}}\" } }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        },
+        {
+          "name": "List filtered schedules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Schedule list succeeds', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.test('Created schedule is listed', () => pm.expect(body.data.schedules.items.some(item => item.id === pm.environment.get('scheduleId'))).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query Schedules($filter: ScheduleFilterInput, $pagination: PaginationInput) { schedules(filter: $filter, pagination: $pagination) { items { id objective scheduledAt } pageInfo { total } } }\",\n  \"variables\": { \"filter\": { \"doctorId\": \"{{doctorId}}\", \"search\": \"Postman\" }, \"pagination\": { \"page\": 1, \"limit\": 10 } }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        },
+        {
+          "name": "Reject doctor double-booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Conflict uses SCHEDULE_CONFLICT', () => pm.expect(body.errors[0].extensions.code).to.eql('SCHEDULE_CONFLICT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation CreateSchedule($input: CreateScheduleInput!) { createSchedule(input: $input) { id } }\",\n  \"variables\": { \"input\": { \"customerId\": \"{{customerId}}\", \"doctorId\": \"{{doctorId}}\", \"objective\": \"Conflicting appointment\", \"scheduledAt\": \"{{scheduledAt}}\" } }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        },
+        {
+          "name": "Delete schedule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Schedule deletion succeeds', () => pm.expect(body.errors).to.be.undefined);",
+                  "pm.test('Deleted ID matches', () => pm.expect(body.data.deleteSchedule.id).to.eql(pm.environment.get('scheduleId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation DeleteSchedule($id: ID!) { deleteSchedule(id: $id) { id } }\",\n  \"variables\": { \"id\": \"{{scheduleId}}\" }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        },
+        {
+          "name": "Verify confirmation and cancellation emails",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "type": "text/javascript", "exec": ["setTimeout(() => {}, 1000);"] }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const messages = body.messages || [];",
+                  "pm.test('At least two matching emails arrived', () => pm.expect(messages.length).to.be.at.least(2));",
+                  "pm.test('Confirmation email arrived', () => pm.expect(messages.some(item => /confirmation/i.test(item.Subject))).to.be.true);",
+                  "pm.test('Cancellation email arrived', () => pm.expect(messages.some(item => /cancelled/i.test(item.Subject))).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{mailpitUrl}}/api/v1/search?query={{testUserEmail}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Cleanup",
+      "item": [
+        {
+          "name": "Delete customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Customer cleanup succeeds', () => pm.expect(body.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation DeleteCustomer($id: ID!) { deleteCustomer(id: $id) { id } }\",\n  \"variables\": { \"id\": \"{{customerId}}\" }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        },
+        {
+          "name": "Delete doctor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Doctor cleanup succeeds', () => pm.expect(body.errors).to.be.undefined);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"mutation DeleteDoctor($id: ID!) { deleteDoctor(id: $id) { id } }\",\n  \"variables\": { \"id\": \"{{doctorId}}\" }\n}"
+            },
+            "url": "{{scheduleUrl}}"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -62,6 +62,8 @@ For a guided manual walkthrough and expected results, start with the [reviewer t
 
 Each service has independent dependencies. With Node 24 installed, run `npm ci`, `npm run prisma:generate` (Auth and Schedule only), and `npm run test:cov` in each service directory. Schedule and Notification enforce coverage thresholds. For an end-to-end check against a running local stack, run `node scripts/acceptance.mjs`; it exercises CRUD, authentication, conflicts and both email notifications. It deletes its test customer, doctor and appointment, but leaves its test user account. `AUTH_URL`, `SCHEDULE_URL` and `MAILPIT_URL` can point the test at an isolated stack.
 
+For a reviewer-friendly API run, import `postman/Healthcare-Scheduling.postman_collection.json` and `postman/Local.postman_environment.json`, select the Local environment, and run the complete collection. It carries the token and created IDs between requests, verifies conflict handling and both emails, and removes the created clinic records.
+
 ## Try the API
 
 Send this mutation to the Auth endpoint with JSON content type:
@@ -97,4 +99,14 @@ mutation {
 
 Query `{ schedules { items { id objective scheduledAt customer { name } doctor { name } } pageInfo { total } } }`, or cancel with `mutation { deleteSchedule(id: "SCHEDULE_ID") { id } }`. Both creation and cancellation send an email to Mailpit. The database prevents double booking a doctor at the same time. Schedule mutations and their audit records commit together.
 
-Stop the stack with `docker compose down`; its named volumes retain data. This MVP provides a local staff interface. Production hardening, integration tests, and operational documentation remain in [TODO.md](TODO.md).
+Stop the stack with `docker compose down`; its named volumes retain data. This MVP provides a local staff interface. Deferred production hardening and optional enhancements are tracked in [TODO.md](TODO.md) and the [roadmap](docs/roadmap.md).
+
+## Documentation
+
+- [Architecture and service boundaries](docs/architecture.md)
+- [GraphQL API and error contract](docs/api.md)
+- [Operations and degraded-dependency behavior](docs/operations.md)
+- [Testing strategy and release gates](docs/testing.md)
+- [Detailed reviewer walkthrough](docs/testing-guide.md)
+- [Roadmap and explicit non-goals](docs/roadmap.md)
+- [Ringkasan proyek dalam Bahasa Indonesia](docs/ringkasan-id.md)

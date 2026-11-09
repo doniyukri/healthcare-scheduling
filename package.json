@@ -1,6 +1,6 @@
 {
   "name": "healthcare-scheduling",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Production-grade healthcare scheduling platform: NestJS, GraphQL, PostgreSQL, Prisma, Redis and BullMQ microservices.",
   "license": "MIT",
